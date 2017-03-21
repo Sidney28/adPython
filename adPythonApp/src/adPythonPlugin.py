@@ -18,23 +18,34 @@ def makePyInst(portname, filename, classname):
     log.setLevel(logging.INFO) 
     log.info("Creating %s:%s with portname %s", 
         os.path.basename(filename), classname, portname)
+    AdPythonPlugin.log = log
     try:
-        # This dance is needed to load a file explicitly from a filename
-        f = open(filename)
+	# This dance is needed to load a file explicitly from a filename
         pymodule, ext = os.path.splitext(os.path.basename(filename))
-        AdPythonPlugin.log = log        
-        mod = imp.load_module(pymodule, f, filename, (ext, 'U', 1))
-        f.close()
+	(f, pathname, description) = imp.find_module(pymodule, [ os.path.dirname(filename) ])
+	
+	try:        
+	    mod = imp.load_module(pymodule, f, pathname, description)
+	except:
+            log.exception("Load module %s:%s threw exception", filename, classname)
+            raise
+	finally:
+            f.close()
+        
         # Get classname ref from this module and make an instance of it
         inst = getattr(mod, classname)()
+	
         # Call paramChanged it might do some useful setup
         inst.paramChanged()
+	
         return inst
     except:
         # Log the exception in the logger as the C caller will throw away the
         # exception text
         log.exception("Creating %s:%s threw exception", filename, classname)
         raise
+
+    
 
 class AdPythonPlugin(object):   
     # Will be our param dict
@@ -89,12 +100,12 @@ class AdPythonPlugin(object):
         pass
     
     # called when a new array is generated
-    def _processArray(self, arr, attr):
+    def _processArray(self, arr, attr, ts):
         try:
             # Tell numpy that it does not own the data in arr, so it is read only
             # This should really be done at the C layer, but it's much easier here!        
             arr.flags.writeable = False            
-            return self.processArray(arr, attr)
+            return self.processArray(arr, attr, timestamp=ts)
         except:
             # Log the exception in the logger as the C caller will throw away 
             # the exception text        

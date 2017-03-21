@@ -35,7 +35,7 @@ class Template(AdPythonPlugin):
         # just log it for now, do nothing.
         self.log.debug("Parameter has been changed %s", self)
 
-    def processArray(self, arr, attr={}):
+    def processArray(self, arr, attr={}, timestamp=0.0):
         # Turn the picture gray
         gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
         # copy the array output

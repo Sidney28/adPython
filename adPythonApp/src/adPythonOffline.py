@@ -2,6 +2,10 @@
 import cv2, os, numpy, signal
 from optparse import OptionParser
 
+from datetime import datetime, date
+import calendar
+import pytz
+
 class AdPythonOffline(object):   
     def __init__(self, plugin, **ranges):
         self.plugin = plugin
@@ -162,8 +166,10 @@ Display a gui that lets the user interactively change parameters on each image
         # RGB please!
         if self.options.rgb:
             src = cv2.cvtColor(src, cv2.COLOR_BGR2RGB)
+        # make timestamp
+        ts=calendar.timegm(datetime.now(pytz.utc).timetuple())
         # pass it to the process function
-        result = self.plugin._processArray(src, {})
+        result = self.plugin._processArray(src, {},ts)
         # show the input image if nothing returned
         if result is None:
             result = src

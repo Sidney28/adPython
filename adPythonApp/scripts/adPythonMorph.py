@@ -21,7 +21,7 @@ class Morph(AdPythonPlugin):
         params = dict(ksize = 3, operation = 1, iters = 1)
         AdPythonPlugin.__init__(self, params)
 
-    def processArray(self, arr, attr={}):
+    def processArray(self, arr, attr={}, timestamp=0.0):
         dest = arr
         # skip this image?
         if self["iters"] == 0: 

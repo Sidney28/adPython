@@ -18,7 +18,7 @@ class Focus(AdPythonPlugin):
         self.element = cv2.getStructuringElement(cv2.MORPH_OPEN, (ksize, ksize))
         self.log.info('Changed parameter, ksize=%s', str(ksize))
 
-    def processArray(self, arr, attr):
+    def processArray(self, arr, attr, timestamp=0.0):
         # got a new image to process
         self.log.debug("arr size: %s", arr.shape)
         self.log.debug("parameters: %s", str(self._params))

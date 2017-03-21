@@ -49,8 +49,8 @@ adPythonPlugin::adPythonPlugin(const char *portNameArg, const char *filename,
     : NDPluginDriver(portNameArg, queueSize, blockingCallbacks,
                        NDArrayPort, NDArrayAddr, 1, NUM_ADPYTHONPLUGIN_PARAMS, 
                        maxBuffers, maxMemory,
-                       asynGenericPointerMask|asynFloat64ArrayMask,
-                       asynGenericPointerMask|asynFloat64ArrayMask,
+                   asynInt32ArrayMask | asynFloat64ArrayMask | asynGenericPointerMask,
+                   asynInt32ArrayMask | asynFloat64ArrayMask | asynGenericPointerMask,
                        ASYN_MULTIDEVICE, 1, priority, stackSize) 
 {
     // Initialise some params
@@ -64,27 +64,34 @@ adPythonPlugin::adPythonPlugin(const char *portNameArg, const char *filename,
     this->nextParam = 0;
     this->pluginState = 0;
     this->pFileAttributes = new NDAttributeList;
-   
-    // Create the base class parameters (our python class may make some more)
-    setStringParam(NDPluginDriverPluginType, driverName);
+ 
+    // Create the base class parameters (our python class may make some more)   
     createParam("ADPYTHON_FILENAME",   asynParamOctet,   &adPythonFilename);
-    setStringParam(adPythonFilename,   filename);
     createParam("ADPYTHON_CLASSNAME",  asynParamOctet,   &adPythonClassname);
-    setStringParam(adPythonClassname,  classname);
     createParam("ADPYTHON_LOAD",       asynParamInt32,   &adPythonLoad);
     createParam("ADPYTHON_TIME",       asynParamFloat64, &adPythonTime);    
-    createParam("ADPYTHON_STATE",      asynParamInt32,   &adPythonState);        
+    createParam("ADPYTHON_STATE",      asynParamInt32,   &adPythonState);
+
+    // Set perams values
+    setStringParam(adPythonClassname,  classname);
+    setStringParam(adPythonFilename,   filename);        
+    setStringParam(NDPluginDriverPluginType, driverName);
 
     // First we tell python where to find adPythonPlugin.py and other scripts
     char buffer[BIGBUFFER];
-    snprintf(buffer, sizeof(buffer), "PYTHONPATH=%s", DATADIRS);
+    char * pPythonPath = getenv ("PYTHONPATH");
+    if (NULL != pPythonPath){
+        snprintf(buffer, sizeof(buffer), "PYTHONPATH=%s:%s", pPythonPath, DATADIRS);
+    } else {
+        snprintf(buffer, sizeof(buffer), "PYTHONPATH=%s", DATADIRS);
+    }
     putenv(buffer);
     
     // Now we initialise python
     if (!Py_IsInitialized()) {
-        PyEval_InitThreads();
         Py_Initialize();
-    
+        PyEval_InitThreads();
+        
         // Be sure to save thread state to release the GIL and give a handle
         // on the interpreter to this and other ports
         mainThreadState = PyEval_SaveThread();
@@ -111,8 +118,12 @@ adPythonPlugin::adPythonPlugin(const char *portNameArg, const char *filename,
         this->updateParamList(1);
     }
     
-    // Release the GIL and finish
     this->threadState = PyEval_SaveThread();
+
+    setIntegerParam(NDArrayCallbacks, 1);
+
+    /* Try to connect to the array port */
+    connectToArrayPort();
 }
 
 /** Callback function that is called by the NDArray driver with new NDArray data
@@ -124,12 +135,17 @@ adPythonPlugin::adPythonPlugin(const char *portNameArg, const char *filename,
   * Called with this->lock taken
   */
 void adPythonPlugin::processCallbacks(NDArray *pArray) {
+    
     // First call the base class method
     NDPluginDriver::processCallbacks(pArray);
 
     // Make sure we are in a good state, otherwise do nothing
-    if (this->pluginState != GOOD) return;
-
+    if (this->pluginState != GOOD){
+	asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+            "%s:%s: Plugin Satate isnt GOOD! processCallbacks failed\n",
+            driverName, __func__);
+	return;
+    }
     // We have to modify our python dict to match our param list
     // Note: to avoid deadlocks we should always take locks in order:
     //  dictMutex, then GIL, then this->lock
@@ -421,7 +437,7 @@ asynStatus adPythonPlugin::wrapArray(NDArray *pArray) {
     // Construct argument list, don't increment pValue so it is destroyed with
     // pProcessArgs
     Py_XDECREF(this->pProcessArgs);
-    this->pProcessArgs = Py_BuildValue("(NO)", pValue, this->pAttrs);
+    this->pProcessArgs = Py_BuildValue("(NOd)", pValue, this->pAttrs, pArray->timeStamp);
     if (this->pProcessArgs == NULL) {
         Py_DECREF(pValue);    
         Bad("Cannot build tuple for processArray()");
@@ -788,11 +804,12 @@ static int adPythonPluginConfigure(const char *portNameArg, const char *filename
                    int priority, int stackSize) {
     // Stack Size must be a minimum of 2MB
     if (stackSize < 2097152) stackSize = 2097152;
-    new adPythonPlugin(portNameArg, filename,
+    adPythonPlugin *pPlugin = new adPythonPlugin(portNameArg, filename,
                    classname, queueSize, blockingCallbacks,
                    NDArrayPort, NDArrayAddr, maxBuffers, maxMemory,
                    priority, stackSize);
-    return(asynSuccess);
+
+    return(pPlugin->start());
 }
 
 /* EPICS iocsh shell commands */

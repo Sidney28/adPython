@@ -113,7 +113,7 @@ class Mitegen(AdPythonPlugin):
             # not supported
             return -1
 
-    def processArray(self, arr, attr={}):
+    def processArray(self, arr, attr={}, timestamp=0.0):
         # convert to grey
         gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
         if self["step"] <= 0: 

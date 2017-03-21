@@ -29,7 +29,7 @@ class Transfer(AdPythonPlugin):
     def paramChanged(self):
         pass
     
-    def processArray(self, arr, attr):
+    def processArray(self, arr, attr,timestamp=0.0):
         self.log.debug('packing array with shape: %s', str(arr.shape))
         
         # Pack a description of the array dimensions and datatype into a packet

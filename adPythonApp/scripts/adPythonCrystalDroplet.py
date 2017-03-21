@@ -94,7 +94,7 @@ class CrystalDroplet(AdPythonPlugin):
                 elif typ in (UNSIGNED_INT, UINT64, SHORT):
                     self.det.setInt(param, self[p])
 
-    def processArray(self, arr, attr={}):
+    def processArray(self, arr, attr={},timestamp=0.0):
         arr = cv2.resize(arr, (1280, 960))
         self.dest = arr
         

@@ -89,7 +89,7 @@ class BarCode(AdPythonPlugin):
             self['type'] = ""
             self['quality'] = 0
     
-    def processArray(self, arr, attr):
+    def processArray(self, arr, attr, timestamp=0.0):
         # If the user has not started scanning then abort immediately
         if not self['busy'] == 1: return None
         
