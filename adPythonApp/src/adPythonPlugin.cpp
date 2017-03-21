@@ -158,8 +158,8 @@ void adPythonPlugin::processCallbacks(NDArray *pArray) {
     this->lock(); 
 
     // Store the time at the beginning of processing for profiling 
-    epicsTimeStamp start, end;
-    epicsTimeGetCurrent(&start);
+    epicsTimeStamp start_ts, end_ts;
+    epicsTimeGetCurrent(&start_ts);
        
     // Update the attribute dict
     this->updateAttrDict(pArray);        
@@ -191,8 +191,8 @@ void adPythonPlugin::processCallbacks(NDArray *pArray) {
     epicsMutexUnlock(this->dictMutex);
     
     // timestamp
-    epicsTimeGetCurrent(&end);
-    setDoubleParam(adPythonTime, epicsTimeDiffInSeconds(&end, &start)*1000);
+    epicsTimeGetCurrent(&end_ts);
+    setDoubleParam(adPythonTime, epicsTimeDiffInSeconds(&end_ts, &start_ts)*1000);
     callParamCallbacks();    
     
     // Spit out the array
