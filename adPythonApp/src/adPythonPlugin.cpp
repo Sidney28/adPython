@@ -433,11 +433,15 @@ asynStatus adPythonPlugin::wrapArray(NDArray *pArray) {
     PyObject* pValue = PyArray_SimpleNewFromData(pArray->ndims, npy_dims, 
         npy_fmt, pArray->pData);   
     if (pValue == NULL) Bad("Cannot make numpy array");
+   
+    char time_string_buffer[50];
+    epicsTimeToStrftime(time_string_buffer, 50, "%Y-%m-%d %H:%M:%S.%06f", &pArray->epicsTS);
+    time_string_buffer[49]=0;
     
     // Construct argument list, don't increment pValue so it is destroyed with
     // pProcessArgs
     Py_XDECREF(this->pProcessArgs);
-    this->pProcessArgs = Py_BuildValue("(NOd)", pValue, this->pAttrs, pArray->timeStamp);
+    this->pProcessArgs = Py_BuildValue("(NOs)", pValue, this->pAttrs, time_string_buffer);
     if (this->pProcessArgs == NULL) {
         Py_DECREF(pValue);    
         Bad("Cannot build tuple for processArray()");
